@@ -9,8 +9,12 @@ from scipy.ndimage import gaussian_filter1d
 PIXELSIZE = 6.45 
 FIGSIZE = (4,3)
 
-
-    
+grating = {
+    '300':9.4244,
+    '600':4.7296,
+    '1200':2.3442,
+    '1800':1.51233,
+}
 # Converts an input string to a 2d np.array
 def conv_data(data: str) -> np.ndarray:
     horizontal = data.split('\n')
@@ -72,6 +76,7 @@ def data_img_printer_full(data: dict,name: str, pos: float, scale: float):
     ax.set_title(name)
     fig.tight_layout()
     fig.savefig('img/' + name + '_full_raw.png')
+    plt.close()
 
 #Cuts lines from the image top is the first line to print, bottom the last
 def data_img_printer(data: dict,name: str,top:int, bottom:int, pos: float,scale: float):
@@ -83,6 +88,7 @@ def data_img_printer(data: dict,name: str,top:int, bottom:int, pos: float,scale:
     ax.set_title(name)
     fig.tight_layout()
     fig.savefig('img/' + name + '_'+ str(top) + '_' + str(bottom) + '_raw.png')
+    plt.close()
 
 
 
