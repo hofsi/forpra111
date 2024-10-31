@@ -110,19 +110,28 @@ def peak_finder(data: dict,name: str,top:int, bottom:int, pos: float,scale: floa
     vals = norm(compress(data,name,top,bottom),0.1)
     average = np.average(vals)
     possible_peaks = []
-    blocker = 0
+    blocker = False
+    temp_pos = 0
     for i,e in enumerate(vals):
-        if i < blocker:
-            continue
+        if not possible_peaks == []:
+            if i < peakrange + possible_peaks[-1][1]:
+                continue
         if e > (average * peakhight):
-            check = False
-            blocker = i + peakrange
-            possible_peaks.append(i)
+            if not blocker:
+                blocker = True
+                temp_pos = i
+        else:
+            if blocker:
+                blocker = False
+                possible_peaks.append([temp_pos,i])
+                
     result = []
     x = axis(len(vals),pos,scale,False)
     for i in possible_peaks:
-        lower = i-fitrange
-        upper = i+fitrange
+        lower = i[0]-fitrange
+        upper = i[1]+fitrange
+        peak_width = (i[1]-i[0])
+        center = i[0] + int(peak_width/2)
         if lower< 0:
             lower = 0
         if upper > len(vals):
@@ -132,9 +141,13 @@ def peak_finder(data: dict,name: str,top:int, bottom:int, pos: float,scale: floa
         if helper:
             print(i)
             plt.plot(x0,y)
+            mu = 1/np.sqrt(np.sqrt(peak_width * PIXELSIZE * 0.001) )
+            print(mu)
+            gaus = gauss(x0,np.max(y)**1.2,x[center], mu)
+            plt.plot(x0,gaus)
             plt.show()
         try:
-            parameters, covariance = curve_fit(gauss, x0, y, p0=[np.max(x0),x[i], 30])
+            parameters, covariance = curve_fit(gauss, x0, y, p0=[np.max(y)**1.2,x[center], 1.2])
             if (parameters[1]>x0[-1] or parameters[1]<x0[0]):
                 raise ValueError("Fit Value outside of bounds")
             result.append(parameters)

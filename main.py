@@ -28,6 +28,7 @@ data.histogram(d,'2_SplitSize040mm.asc',top=400,bottom=401,pos=650,scale=4.321)
 
 for i in d.keys():
     #Searches for peaks in the histogram, plot plots the histogramm with the fittet gaussian curves, peakhigth is n * the standarddiviation and has to be surpassed to be classified as a peak, peak range defines a area after a peak in which no new peaks will be seachrched for, fitrange is the area befor and after a suspected peak that is used for the optimization function.
-    data.peak_finder(d,i,top=400,bottom=401,pos=650,scale=4.321,plot=True,peakhight=4,peakrange=150,fitrange=50,helper=False)
+    data.peak_finder(d,i,top=400,bottom=401,pos=650,scale=4.321,plot=True,peakhight=4,peakrange=50,fitrange=100,helper=True)
+    break
 print(d.keys())
 
