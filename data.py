@@ -8,6 +8,7 @@ from scipy.ndimage import gaussian_filter1d
 
 PIXELSIZE = 6.45 
 FIGSIZE = (4,3)
+DEBUG = False
 
 grating = {
     '300':9.4244,
@@ -112,6 +113,30 @@ def histogram(data: dict,name: str,top:int, bottom:int, pos: float,scale: float)
 def gauss(x, A, x0, sigma): 
     return A/(sigma*(np.sqrt(2*np.pi))) * (np.exp(-(x - x0) ** 2 / (2 * sigma ** 2)))
 
+#Finds valleys
+def diff(vals,start,peakrange):
+    result = []
+    for i in range(5,len(vals)):
+        if vals[i-4] > vals[i-2] and vals[i-3] >= vals[i-2] and vals[i-2] <= vals[i-1] and vals[i-2] <= vals[i]:
+            result.append(start+i-2)
+    return result
+
+#Breaks up connected peaks   
+def seperate_multipeaks(vals,start,end,peakrange):
+    sep = diff(vals,start,peakrange)
+    result = []
+    if not sep:
+        result = [[start,end]]
+    else:
+        result = [[start,sep[0]]]
+        if len(sep) > 1:
+            for i in range(1,len(sep)):
+                result.append([sep[i-1],sep[i]])
+        result.append([sep[-1],end])
+    return result
+    
+    
+    
 def find_peaks(vals:np.array,x:np.array,peakrange:int,peakhight:int, helper:bool):
      #Find Peaks select width and block for peakrange
     std = np.std(vals)
@@ -125,9 +150,6 @@ def find_peaks(vals:np.array,x:np.array,peakrange:int,peakhight:int, helper:bool
         plt.axhline(std,color='pink')
         plt.show()
     for i,e in enumerate(blurr):
-        if not possible_peaks == []:
-            if i < peakrange + possible_peaks[-1][1]:
-                continue
         if e > (std * peakhight):
             if not blocker:
                 blocker = True
@@ -135,7 +157,9 @@ def find_peaks(vals:np.array,x:np.array,peakrange:int,peakhight:int, helper:bool
         else:
             if blocker:
                 blocker = False
-                possible_peaks.append([temp_pos,i])
+                sep = seperate_multipeaks(vals[temp_pos:i],temp_pos,i,peakrange)
+                possible_peaks.extend(sep)
+    #Seperate Multipeaks
     return possible_peaks
 
 def fit_peaks(vals:np.array,x:np.array,possible_peaks:list,name: str,peakrange:int,fitrange: int, helper:bool):
@@ -159,10 +183,10 @@ def fit_peaks(vals:np.array,x:np.array,possible_peaks:list,name: str,peakrange:i
             parameters, covariance = curve_fit(gauss, x0, y, p0=[A,x[center], mu])
             if (parameters[1]>x0[-1] or parameters[1]<x0[0]):
                 raise ValueError("Fit Value outside of bounds")
-            if (parameters[0]<0):
-                raise ValueError("Negative Hight Peak")
-            if (parameters[2]<0):
-                raise ValueError("Negative Hight Peak")
+            #if (parameters[0]<0):
+            #    raise ValueError("Negative Hight Peak")
+            #if (parameters[2]<0):
+            #    raise ValueError("Negative Hight Peak")
             #if result:
                 #nm_peakrange = (peakrange * PIXELSIZE * 0.001)
                 #if (parameters[1]>result[-1][1] + nm_peakrange or parameters[1]<result[-1]#[1] - nm_peakrange):
