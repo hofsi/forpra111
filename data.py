@@ -106,20 +106,17 @@ def histogram(data: dict,name: str,top:int, bottom:int, pos: float,scale: float)
 def gauss(x, A, x0, sigma): 
     return A/(sigma*(np.sqrt(2*np.pi))) * (np.exp(-(x - x0) ** 2 / (2 * sigma ** 2)))
 
-# Find Peaks peakhight: multiplyer of std to count as peak, peakrange: int of numbers arround a peak that is ignored from peak search, fitrange: int range where scipy tries to fit the gaussian
-def peak_finder(data: dict,name: str,top:int, bottom:int, pos: float,scale: float, plot:bool, peakhight: float, peakrange: int, fitrange: int,helper: bool):
-    vals = norm(compress(data,name,top,bottom),0.1)
+def find_peaks(vals:np.array,x:np.array,peakrange:int,peakhight:int, helper:bool):
+     #Find Peaks select width and block for peakrange
     std = np.std(vals)
     possible_peaks = []
     blocker = False
     temp_pos = 0
-    #Find Peaks select width and block for peakrange
-    x = axis(len(vals),pos,scale,False)
     blurr = gaussian_filter1d(vals,5)
     if helper:
-        plt.plot(x,vals, color='red')
+        plt.plot(x,vals, color='red',linestyle='dotted')
         plt.plot(x,blurr)
-        plt.title(name)
+        plt.axhline(std,color='pink')
         plt.show()
     for i,e in enumerate(blurr):
         if not possible_peaks == []:
@@ -133,7 +130,9 @@ def peak_finder(data: dict,name: str,top:int, bottom:int, pos: float,scale: floa
             if blocker:
                 blocker = False
                 possible_peaks.append([temp_pos,i])
-                
+    return possible_peaks
+
+def fit_peaks(vals:np.array,x:np.array,possible_peaks:list,name: str,peakrange:int,fitrange: int, helper:bool):
     result = []  
     #Fit peaks
     for i in possible_peaks:
@@ -182,6 +181,14 @@ def peak_finder(data: dict,name: str,top:int, bottom:int, pos: float,scale: floa
             else:
                 plt.title(name + ' ' + str(vals[center]) + ' nm fit was not possible')
             plt.show()
+        return result   
+# Find Peaks peakhight: multiplyer of std to count as peak, peakrange: int of numbers arround a peak that is ignored from peak search, fitrange: int range where scipy tries to fit the gaussian
+def peak_finder(data: dict,name: str,top:int, bottom:int, pos: float,scale: float, plot:bool, peakhight: float, peakrange: int, fitrange: int,helper: bool):
+    vals = norm(compress(data,name,top,bottom),0.1)
+    
+    x = axis(len(vals),pos,scale,False)
+    possible_peaks = find_peaks(vals,x,peakrange,peakhight,helper)
+    result = fit_peaks(vals,x,possible_peaks,name,peakrange,fitrange, helper)
     
     if plot:
         if not os.path.exists(os.getcwd() + '/peaks'):
