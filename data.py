@@ -157,10 +157,10 @@ def fit_peaks(vals:np.array,x:np.array,possible_peaks:list,name: str,peakrange:i
                 raise ValueError("Negative Hight Peak")
             if (parameters[2]<0):
                 raise ValueError("Negative Hight Peak")
-            if result:
-                nm_peakrange = (peakrange * PIXELSIZE * 0.001)
-                if (parameters[1]>result[-1][1] + nm_peakrange or parameters[1]<result[-1][1]- nm_peakrange):
-                    raise ValueError("Peak to close to previous peak")
+            #if result:
+                #nm_peakrange = (peakrange * PIXELSIZE * 0.001)
+                #if (parameters[1]>result[-1][1] + nm_peakrange or parameters[1]<result[-1]#[1] - nm_peakrange):
+                #    raise ValueError("Peak to close to previous peak")
             result.append(parameters)
         except ValueError as err:
             print(name + ' ' + err.args[0] + ' ' + str(x[i]))
@@ -181,7 +181,7 @@ def fit_peaks(vals:np.array,x:np.array,possible_peaks:list,name: str,peakrange:i
             else:
                 plt.title(name + ' ' + str(vals[center]) + ' nm fit was not possible')
             plt.show()
-        return result   
+    return result   
 # Find Peaks peakhight: multiplyer of std to count as peak, peakrange: int of numbers arround a peak that is ignored from peak search, fitrange: int range where scipy tries to fit the gaussian
 def peak_finder(data: dict,name: str,top:int, bottom:int, pos: float,scale: float, plot:bool, peakhight: float, peakrange: int, fitrange: int,helper: bool):
     vals = norm(compress(data,name,top,bottom),0.1)
