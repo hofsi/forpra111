@@ -26,9 +26,12 @@ data.FIGSIZE = (12,6)
 #creates a baselinecorrected histogram of the selected area
 data.histogram(d,'2_SplitSize040mm.asc',top=400,bottom=401,pos=650,scale=4.321)
 
-for i in d.keys():
+for i,e in enumerate(d.keys()):
     #Searches for peaks in the histogram, plot plots the histogramm with the fittet gaussian curves, peakhigth is n * the standarddiviation and has to be surpassed to be classified as a peak, peak range defines a area after a peak in which no new peaks will be seachrched for, fitrange is the area befor and after a suspected peak that is used for the optimization function.
-    data.peak_finder(d,i,top=400,bottom=401,pos=650,scale=4.321,plot=True,peakhight=4,peakrange=50,fitrange=100,helper=True)
-    break
+    if (i == 2):
+        continue
+    if (i > 2):
+        break
+    data.peak_finder(d,e,top=400,bottom=401,pos=650,scale=4.321,plot=True,peakhight=1,peakrange=20,fitrange=60,helper=True)
 print(d.keys())
 

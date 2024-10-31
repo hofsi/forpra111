@@ -4,6 +4,7 @@ import numpy as np
 import matplotlib.pyplot as plt
 import matplotlib.colors as colors
 from scipy.optimize import curve_fit
+from scipy.ndimage import gaussian_filter1d
 
 PIXELSIZE = 6.45 
 FIGSIZE = (4,3)
@@ -105,18 +106,26 @@ def histogram(data: dict,name: str,top:int, bottom:int, pos: float,scale: float)
 def gauss(x, A, x0, sigma): 
     return A/(sigma*(np.sqrt(2*np.pi))) * (np.exp(-(x - x0) ** 2 / (2 * sigma ** 2)))
 
-# Find Peaks peakhight: multiplyer of average to count as peak, peakrange: int of numbers arround a peak that is ignored from peak search, fitrange: int range where scipy tries to fit the gaussian
+# Find Peaks peakhight: multiplyer of std to count as peak, peakrange: int of numbers arround a peak that is ignored from peak search, fitrange: int range where scipy tries to fit the gaussian
 def peak_finder(data: dict,name: str,top:int, bottom:int, pos: float,scale: float, plot:bool, peakhight: float, peakrange: int, fitrange: int,helper: bool):
     vals = norm(compress(data,name,top,bottom),0.1)
-    average = np.average(vals)
+    std = np.std(vals)
     possible_peaks = []
     blocker = False
     temp_pos = 0
-    for i,e in enumerate(vals):
+    #Find Peaks select width and block for peakrange
+    x = axis(len(vals),pos,scale,False)
+    blurr = gaussian_filter1d(vals,5)
+    if helper:
+        plt.plot(x,vals, color='red')
+        plt.plot(x,blurr)
+        plt.title(name)
+        plt.show()
+    for i,e in enumerate(blurr):
         if not possible_peaks == []:
             if i < peakrange + possible_peaks[-1][1]:
                 continue
-        if e > (average * peakhight):
+        if e > (std * peakhight):
             if not blocker:
                 blocker = True
                 temp_pos = i
@@ -125,8 +134,8 @@ def peak_finder(data: dict,name: str,top:int, bottom:int, pos: float,scale: floa
                 blocker = False
                 possible_peaks.append([temp_pos,i])
                 
-    result = []
-    x = axis(len(vals),pos,scale,False)
+    result = []  
+    #Fit peaks
     for i in possible_peaks:
         lower = i[0]-fitrange
         upper = i[1]+fitrange
@@ -138,21 +147,41 @@ def peak_finder(data: dict,name: str,top:int, bottom:int, pos: float,scale: floa
             upper = len(vals)
         y = vals[lower:upper]
         x0 = x[lower:upper]
-        if helper:
-            print(i)
-            plt.plot(x0,y)
-            mu = 1/np.sqrt(np.sqrt(peak_width * PIXELSIZE * 0.001) )
-            print(mu)
-            gaus = gauss(x0,np.max(y)**1.2,x[center], mu)
-            plt.plot(x0,gaus)
-            plt.show()
+        mu = 1
+        A = np.max(vals[i[0]:i[1]]) * 2
+        success = True
         try:
-            parameters, covariance = curve_fit(gauss, x0, y, p0=[np.max(y)**1.2,x[center], 1.2])
+            parameters, covariance = curve_fit(gauss, x0, y, p0=[A,x[center], mu])
             if (parameters[1]>x0[-1] or parameters[1]<x0[0]):
                 raise ValueError("Fit Value outside of bounds")
+            if (parameters[0]<0):
+                raise ValueError("Negative Hight Peak")
+            if (parameters[2]<0):
+                raise ValueError("Negative Hight Peak")
+            if result:
+                nm_peakrange = (peakrange * PIXELSIZE * 0.001)
+                if (parameters[1]>result[-1][1] + nm_peakrange or parameters[1]<result[-1][1]- nm_peakrange):
+                    raise ValueError("Peak to close to previous peak")
             result.append(parameters)
+        except ValueError as err:
+            print(name + ' ' + err.args[0] + ' ' + str(x[i]))
+            success = False
         except:
-            print(name + ' Could not fit ' + str(x[i]))
+            print(name + ' could not fit ' + str(x[i]))
+            success = False
+        if helper:
+            plt.plot(x0,y)
+            gaus = gauss(x0,A,x[center], mu)
+            plt.plot(x0,gaus)
+            plt.axvline(x[i[0]],color='red')
+            plt.axvline(x[i[1]],color='red')
+            if success:
+                plt.title(name + ' ' + str(vals[center]) + ' nm')
+                gaus = gauss(x0,parameters[0],parameters[1],parameters[2])
+                plt.plot(x0,gaus, color='green')
+            else:
+                plt.title(name + ' ' + str(vals[center]) + ' nm fit was not possible')
+            plt.show()
     
     if plot:
         if not os.path.exists(os.getcwd() + '/peaks'):
@@ -171,7 +200,8 @@ def peak_finder(data: dict,name: str,top:int, bottom:int, pos: float,scale: floa
 #loads data from the files and storres them in a np savefile
 def data_save():
     data = {}
-    for filename in os.listdir(os.getcwd() + '/data'):
+    files = os.listdir(os.getcwd() + '/data')
+    for filename in sorted(files):
         with open(os.path.join(os.getcwd() + '/data', filename), 'r') as f:
             print('Reading File ' + filename)
             data[filename] = conv_data(f.read())
