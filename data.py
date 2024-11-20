@@ -15,6 +15,7 @@ grating = {
     '600':4.7296,
     '1200':2.3442,
     '1800':1.51233,
+    'none':-1,
 }
 # Converts an input string to a 2d np.array
 def conv_data(data: str) -> np.ndarray:
@@ -56,13 +57,16 @@ def norm(array: np.ndarray, cut: float):
 #Generate a the Axis in nm, len is the total number of y values, pos is the wavelength of the center entry in nm, scale is the nm/mm factor of each grate in relation to the detector
 #Rounding enables rounding of resulting values (is used when using it as label for x axis, reduce count with [::140])
 def axis(len: int, pos: float, scale: float, rounding: bool):
-    axis = np.zeros(len)
-    begining = pos - round(len/2) * (scale * PIXELSIZE * 0.001)
-    for i,_ in enumerate(axis):
-        axis[i] = begining + (i) * (scale * PIXELSIZE * 0.001)
-    if rounding:
-        for i,e in enumerate(axis):
-            axis[i] = round(e,0)
+    if (scale == -1):
+        axis = np.linspace(0,len-1,len)
+    else:
+        axis = np.zeros(len)
+        begining = pos - round(len/2) * (scale * PIXELSIZE * 0.001)
+        for i,_ in enumerate(axis):
+            axis[i] = begining + (i) * (scale * PIXELSIZE * 0.001)
+        if rounding:
+            for i,e in enumerate(axis):
+                axis[i] = round(e,0)
     return axis
 
 
@@ -74,7 +78,9 @@ def data_img_printer_full(data: dict,name: str, pos: float, scale: float):
     fig, ax = plt.subplots(figsize=FIGSIZE)
     im = ax.imshow(normalize(data[name]), interpolation='nearest')
     ax.set_xticks(np.arange(len(data[name][0]))[::140] ,labels = axis(len(data[name][0]),pos,scale,True)[::140])
-    ax.set_title(name)
+    #ax.set_title(name)
+    ax.set_xlabel("Wavelength (nm)")
+    ax.set_ylabel("Pixel")
     fig.tight_layout()
     fig.savefig('img/' + name + '_full_raw.png')
     plt.close()
@@ -86,7 +92,9 @@ def data_img_printer(data: dict,name: str,top:int, bottom:int, pos: float,scale:
     fig, ax = plt.subplots(figsize=FIGSIZE)
     im = ax.imshow(normalize(data[name][top:bottom]), interpolation='nearest')
     ax.set_xticks(np.arange(len(data[name][0]))[::140] ,labels=axis(len(data[name][0]),pos,scale,True)[::140])
-    ax.set_title(name)
+    #ax.set_title(name)
+    ax.set_xlabel("Wavelength (nm)")
+    ax.set_ylabel("Pixel")
     fig.tight_layout()
     fig.savefig('img/' + name + '_'+ str(top) + '_' + str(bottom) + '_raw.png')
     plt.close()
@@ -212,8 +220,8 @@ def fit_peaks(vals:np.array,x:np.array,possible_peaks:list,name: str,peakrange:i
                 plt.title(name + ' ' + str(vals[center]) + ' nm fit was not possible')
             plt.show()
     return result   
-# Find Peaks peakhight: multiplyer of std to count as peak, peakrange: int of numbers arround a peak that is ignored from peak search, fitrange: int range where scipy tries to fit the gaussian
-def peak_finder(data: dict,name: str,top:int, bottom:int, pos: float,scale: float, plot:bool, peakhight: float, peakrange: int, fitrange: int,helper: bool):
+# Find Peaks peakhight: multiplyer of std to count as peak, peakrange: int of numbers arround a peak that is ignored from peak search, fitrange: int range where scipy tries to fit the gaussian, plotter may be a function that plots the peaks instead.
+def peak_finder(data: dict,name: str,top:int, bottom:int, pos: float,scale: float, plot:bool, peakhight: float, peakrange: int, fitrange: int,helper: bool, plotter):
     vals = norm(compress(data,name,top,bottom),0.1)
     
     x = axis(len(vals),pos,scale,False)
@@ -232,6 +240,8 @@ def peak_finder(data: dict,name: str,top:int, bottom:int, pos: float,scale: floa
         fig.tight_layout()
         fig.savefig('peaks/' + name + '_'+ str(top) + '_' + str(bottom) +'_peaks.png')
         plt.close()
+    if plotter:
+        plotter(x,compress(data,name,top,bottom),result)
     return [result]
 
 #loads data from the files and storres them in a np savefile
